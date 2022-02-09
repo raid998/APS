@@ -21,7 +21,7 @@ rule token = parse
   | ')'              { RPAR }
   | ';'              { SEMICOLON }
   | ':'              { COLON }
-  | ','              { COMA }
+  | ','              { COMMA }
   | '*'              { STAR }
   | "->"             { ARROW }
   | "ECHO"           { ECHO }

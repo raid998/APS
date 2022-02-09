@@ -11,15 +11,12 @@
 type typ = 
   Bool
   | Int
-  | FuncT of types*typ
-  and types = 
-  Type of typ
-  | Types of typ*types
+  | FuncT of typ list
 
-  type args = 
-  Arg of arg
-  | Args of arg*args
-  and arg = 
+
+
+
+  type arg = 
   Argu of string*typ
 
   
@@ -30,17 +27,20 @@ type expr =
   | ASTand of expr*expr
   | ASTor of expr*expr
   | ASTApp of expr * expr list
-  | ASTfun of args*expr
+  | ASTfun of arg list*expr
 
 type stat =
     ASTEcho of expr
+    
+type def = 
+ ASTconst of string*typ*expr
+  | ASTfunDef of string*typ*arg list*expr
+  | ASTfunRecDef of string*typ*arg list*expr
+
       
 type cmd =
     ASTStat of stat
+    |ASTDef of def
 
-type def = 
-    ASTconst of string*typ*expr
-  | ASTfunDef of string*typ*args*expr
-  | ASTfunRecDef of string*typ*args*expr
 
 	

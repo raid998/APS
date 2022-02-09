@@ -8,8 +8,33 @@
 (* ==  Génération de termes Prolog                                         == *)
 (* ========================================================================== *)
 open Ast
-  
-let rec print_expr e =
+
+
+let rec print_arg a = match a with 
+  Argu(i,t) -> (
+    Printf.printf"arg(";
+    print_expr (ASTId(i));
+    Printf.printf", ";
+    print_type t;
+    Printf.printf")";
+  ) and  print_args a = match a with
+  [] -> ()
+  |[b] -> print_arg b;
+  |b -> (
+    let rec print_args_aux l = match l with
+      [] -> ()
+      |[le] -> (print_arg le)
+      | lh::lt -> (
+        print_arg lh;
+        Printf.printf", ";
+        print_args_aux lt;
+      )
+      in
+      Printf.printf"Args[";
+      print_args_aux b;
+      Printf.printf"]";
+    
+  ) and print_expr e =
   match e with
       ASTNum n -> Printf.printf"num(%d)" n
     | ASTId x -> Printf.printf"id(%s)" x
@@ -20,6 +45,36 @@ let rec print_expr e =
 	print_exprs es;
 	Printf.printf"])"
       )
+    | ASTif(condition,body,alternant) -> (
+      Printf.printf "if(";
+      print_expr condition;
+      Printf.printf", ";
+      print_expr body;
+      Printf.printf ", ";
+      print_expr alternant;
+      Printf.printf")";
+    )
+    |ASTfun(args,e) -> (
+      Printf.printf"fun(";
+      print_args args;
+      Printf.printf ", ";
+      print_expr e;
+      Printf.printf ")";
+    )
+    |ASTand(a,b) -> (
+      Printf.printf"and(";
+      print_expr a;
+      Printf.printf", ";
+      print_expr b;
+      Printf.printf")";
+    )
+    |ASTor(a,b) -> (
+      Printf.printf"or(";
+      print_expr a;
+      Printf.printf", ";
+      print_expr b;
+      Printf.printf")";
+    )
 and print_exprs es =
   match es with
       [] -> ()
@@ -30,7 +85,7 @@ and print_exprs es =
 	print_exprs es
       )
 
-let print_stat s =
+and print_stat s =
   match s with
       ASTEcho e -> (
 	Printf.printf("echo(");
@@ -38,16 +93,72 @@ let print_stat s =
 	Printf.printf(")")
       )
 
-let print_cmd c =
+and print_type t = 
+  match t with 
+    Bool -> Printf.printf"bool"
+    |Int -> Printf.printf"int"
+    |FuncT(ts) -> (
+      match ts with
+        [] -> ()
+        |[a] -> print_type a
+        | a::b -> (
+          Printf.printf"types[";
+          print_type a;
+          Printf.printf", ";
+          print_type (FuncT(b));
+          Printf.printf"]";
+        )
+    )
+
+and print_def d = 
+match d with 
+    ASTconst(i,t,e) -> (
+      Printf.printf "const(";
+      print_expr (ASTId(i));
+      Printf.printf", ";
+      print_type t;
+      Printf.printf ", ";
+      print_expr e;
+      Printf.printf")";
+    )
+    |ASTfunDef(i,t,a,e) -> (
+      Printf.printf"funDef(";
+      print_expr (ASTId(i));
+      Printf.printf", ";
+      print_type t;
+      Printf.printf", ";
+      print_args a;
+      Printf.printf", ";
+      print_expr e;
+    )
+    |ASTfunRecDef(i,t,a,e) -> (
+      Printf.printf"funRecDef(";
+      print_expr (ASTId(i));
+      Printf.printf", ";
+      print_type t;
+      Printf.printf", ";
+      print_args a;
+      Printf.printf", ";
+      print_expr e;
+    )
+and print_cmd c =
   match c with
       ASTStat s -> print_stat s
-	
-let rec print_cmds cs =
+     |ASTDef d -> print_def d
+
+
+
+and print_cmds cs =
   match cs with
-      c::[] -> print_cmd c
-    | _ -> failwith "not yet implemented"
+    [] -> ()
+    |c::[] -> print_cmd c
+    | a::b -> (
+      print_cmd a;
+      Printf.printf", ";
+      print_cmds b;
+    )
 	
-let print_prog p =
+and print_prog p =
   Printf.printf("prog([");
   print_cmds p;
   Printf.printf("])")
