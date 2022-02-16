@@ -30,9 +30,9 @@ let rec print_arg a = match a with
         print_args_aux lt;
       )
       in
-      Printf.printf"Args[";
+      Printf.printf"args([";
       print_args_aux b;
-      Printf.printf"]";
+      Printf.printf"])";
     
   ) and print_expr e =
   match e with
@@ -98,17 +98,49 @@ and print_type t =
     Bool -> Printf.printf"bool"
     |Int -> Printf.printf"int"
     |FuncT(ts) -> (
-      match ts with
-        [] -> ()
-        |[a] -> print_type a
-        | a::b -> (
-          Printf.printf"types[";
-          print_type a;
-          Printf.printf", ";
-          print_type (FuncT(b));
-          Printf.printf"]";
+      Printf.printf"types([";
+      let rec pta x = 
+            match x with 
+            [] -> ()
+            |[Bool] -> Printf.printf"],bool)"
+            |[Int] -> Printf.printf"],int)"
+            |Bool::c -> (
+              if (List.length c == 1)then (Printf.printf "bool") else
+              Printf.printf"bool, ";
+              pta c;
+            )
+            |Int::c -> (
+              if (List.length c == 1)then (Printf.printf "int") else
+              Printf.printf"int, ";
+              pta c;
+            )
+            |[FuncT([])] -> ()
+            |[FuncT([c])] -> (
+              pta [c];
+            )
+            |[FuncT(c::d)] -> (
+              Printf.printf"types([";
+              pta [c];
+              Printf.printf", ";
+              pta d;
+            )
+            |FuncT([])::c -> pta c
+            |FuncT([c])::d -> (
+              Printf.printf"types([";
+              pta [c];
+              Printf.printf", ";
+              pta d;
+            )
+            |FuncT(c)::d -> (
+              Printf.printf"types([";
+              pta c;
+              Printf.printf", ";
+              pta d;
+            )
+            in pta ts;
+          
         )
-    )
+    
 
 and print_def d = 
 match d with 
