@@ -1,0 +1,1 @@
+[FUN x int [x1:int,x2: int] (add x1 x2) ; ECHO x]

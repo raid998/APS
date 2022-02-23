@@ -19,7 +19,11 @@ let rec print_arg a = match a with
     Printf.printf")";
   ) and  print_args a = match a with
   [] -> ()
-  |[b] -> print_arg b;
+  |[b] -> (
+    Printf.printf"args([";
+    print_arg b;
+    Printf.printf"])";
+    );
   |b -> (
     let rec print_args_aux l = match l with
       [] -> ()
@@ -162,6 +166,7 @@ match d with
       print_args a;
       Printf.printf", ";
       print_expr e;
+      Printf.printf")";
     )
     |ASTfunRecDef(i,t,a,e) -> (
       Printf.printf"funRecDef(";
@@ -172,6 +177,7 @@ match d with
       print_args a;
       Printf.printf", ";
       print_expr e;
+      Printf.printf")";
     )
 and print_cmd c =
   match c with

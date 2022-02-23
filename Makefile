@@ -12,6 +12,7 @@ YACC_ML = ocamlyacc
 OCAMLC = ocamlc
 
 prologTerm: parser prologTerm.ml
+
 	$(OCAMLC) -o prologTerm ast.cmo lexer.cmo parser.cmo prologTerm.ml
 
 parser: ast.ml lexer.mll parser.mly
@@ -29,4 +30,8 @@ clean:
 	rm -f lexer.ml
 	rm -f parser.mli
 	rm -f parser.ml
+	rm -f eval
 	rm *~
+eval: 
+	$(OCAMLC) -c ast.ml
+	$(OCAMLC) -o eval ast.cmo eval.ml
