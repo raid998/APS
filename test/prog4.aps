@@ -1,2 +1,2 @@
-[FUN x int [y: int, z: int] y; ECHO (x 0 2)]
+[FUN x int [y: int, z: int] y; ECHO (x 42 2)]
 

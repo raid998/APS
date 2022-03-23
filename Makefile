@@ -34,4 +34,4 @@ clean:
 	rm *~
 eval: 
 	$(OCAMLC) -c ast.ml
-	$(OCAMLC) -o eval ast.cmo eval.ml
+	$(OCAMLC) -o eval ast.cmo lexer.cmo parser.cmo eval.ml

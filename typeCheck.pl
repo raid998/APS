@@ -53,3 +53,7 @@ typeExpr(G,fun(args(A),E),types(TS,T)) :- assocArg(A,G,NewG),typeExpr(NewG,E,T),
 
 type(E,T) :- initCtx(G0), typeExpr(G0,E,T).
 
+main_stdin :-
+	read(user_input,T),
+	typeProg(T,R),
+	print(R).

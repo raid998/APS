@@ -60,22 +60,15 @@ let rec extractArgs l= match l with
 
 (* ------------------------------------------------ *)
 let rec eval_arg a = match a with 
-  Argu(i,t) -> (
-  ) and  eval_args a = match a with
-  [] -> ()
-  |[b] -> ();
-  |b -> (
-    let rec eval_args_aux l = match l with
-      [] -> ()
-      |[le] -> ()
-      | lh::lt -> ()
-      in
-     ()
+  Argu(i,t) -> i
+   and  eval_args a = match a with
+  [] -> []
+  |[b] -> [eval_arg(b)]
+  |b::bs -> eval_arg b::(eval_args bs)
     
-  ) and eval_expr e c =  match e with
+   and eval_expr e c =  match e with
       ASTNum n -> Z(n)
-    | ASTId x -> fromSome (find_x x c)
-    | ASTApp(e, es) -> 
+      (* | ASTApp(e, es) -> 
       (match e with 
         ASTId("not") -> eval_not ((eval_expr (List.hd es) c)) 
        |ASTId("add") ->  (eval_add (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
@@ -84,58 +77,71 @@ let rec eval_arg a = match a with
        |ASTId("div") ->  (eval_div (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
        |ASTId("eq") ->  (eval_eq (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
        |ASTId("lt") ->  (eval_lt (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
+       |ASTId x -> fromSome (find_x x c)
 
 
-
-      )
+      ) *)
+    | ASTId x -> fromSome (find_x x c)
+    
     |ASTif(condition,body,alternant) -> if ((eval_expr condition c )== Z(1)) then (eval_expr body c) else (eval_expr alternant c)
     |ASTfun(args,e) -> F(e,(extractArgs args),c)
     |ASTand(a,b) -> if (eval_expr a c) == Z(1) then (eval_expr b c) else Z(0)
     |ASTor(a,b) -> if (eval_expr a c) == Z(0) then (eval_expr b c) else Z(1)
-and eval_exprs es =
+    |ASTApp(e,es) -> let closure = eval_expr e c in match closure with
+      |Z(_) -> failwith "Pas une fonction"
+      |F(body,vars,sc) -> let vals = eval_exprs es c in eval_expr body (List.append (List.combine vars vals) sc )
+      |Fr(body,name,vars,sc) -> let vals = eval_exprs es c in eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc )
+
+
+
+and eval_exprs es c=
   match es with
-      [] -> ()
-    | [e] -> ()
-    | e::es -> ()
+      [] -> []
+    | [e] -> [eval_expr e c] 
+    | e::es -> (eval_expr e c)::(eval_exprs es c)
 
-and eval_stat s =
+and eval_stat s c =
   match s with
-      ASTEcho e -> ()
+      ASTEcho e -> match eval_expr e c with
+      | Z(n) -> string_of_int n
+      | _ -> failwith "Pas affichable"
 
-and eval_type t = 
-  match t with 
-    Bool -> ()
-    |Int -> ()
-    |FuncT(ts) -> ()
 
-and eval_def d = 
+and eval_def d c= 
 match d with 
-    ASTconst(i,t,e) -> ()
-    |ASTfunDef(i,t,a,e) -> ()
-    |ASTfunRecDef(i,t,a,e) -> ()
-and eval_cmd c =
-  match c with
-      ASTStat s -> ()
-     |ASTDef d -> ()
+    ASTconst(x,t,e) -> (x, (eval_expr e c)) :: c
+    |ASTfunDef(x,t,a,e) -> (x,F(e,(eval_args a),c)) ::c
+    |ASTfunRecDef(x,t,a,e) -> (x,Fr(e,x,(eval_args a),c)) ::c
 
 
+(* *********************************** *)
 
-and eval_cmds cs =
+
+and eval_cmd cmd c f=
+  match cmd with
+     ASTDef d -> (eval_def d c,f)
+    |ASTStat e -> (c,eval_stat e c)
+
+
+and eval_cmds cs c f=
   match cs with
     [] -> ()
-    |c::[] -> ()
-    | a::b -> ()
+    |[a] -> Printf.printf "%s" (snd (eval_cmd a c f) )
+    | a::b -> eval_cmds b (List.append (fst (eval_cmd a c f)) c) f
 	
-and eval_prog p = ()
+
+(* *********************************** *)
+
+
+
+
+and eval_prog p = eval_cmds p ev_env ""
 ;;
 	
-(*let fname = Sys.argv.(1) in
-let ic = open_in fname in
-  try
-    let lexbuf = Lexing.from_channel ic in
-    let p = Parser.prog Lexer.token lexbuf in
-      eval_prog p;
-      print_string ".\n"
-  with Lexer.Eof ->
-    exit 0 *)
-      
+let _ =
+	try
+		let fl = open_in Sys.argv.(1) in
+		let lexbuf = Lexing.from_channel fl in
+		let p = Parser.prog Lexer.token lexbuf in
+			(eval_prog p)
+	with Lexer.Eof -> exit 0
