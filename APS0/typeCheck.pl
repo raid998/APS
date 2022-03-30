@@ -4,6 +4,9 @@ assocArg([arg(id(X),Y)|Tail],List,[(X,Y)|Rest]) :- assocArg(Tail,List,Rest).
 assoc(X, [(X,V)|_], V).
 assoc(X, [_|XS], V) :- assoc(X, XS, V).
 
+append([],Ys,Ys).
+appen([X|Xs],Ys,[X|Zs]) :- append(Xs,Ys,Zs).
+
 initCtx([(true,bool),(false,bool),(not,types([bool],bool)),(eq,types([int,int],bool)),(lt,types([int,int],bool)),(add,types([int,int],int)),(sub,types([int,int],int)),(mul,types([int,int],int)),(div,types([int,int],int))]).
 
 typeCheck(G,[E],[T]) :- typeExpr(G,E,T).
@@ -28,7 +31,7 @@ typeProg(prog(P),void) :- initCtx(G0),typeSeq(G0,P,void).
 
 typeDef(G,const(id(X),T,E),[(X,T)|G]) :- typeExpr(G,E,T).
 typeDef(G,funDef(id(X),T,args(A),E),[(X,types(TS,T))|G]) :- assocArg(A,G,G1), typeExpr(G1,E,T),genTypes(A,[],TS).
-typeDef(G,funRecDef(id(X),T,args(A),E),[(X,types(TS,T))|G]) :- assocArg(A,G,G1), genTypes(A,[],TS), typeExpr([(x,types(TS,T))|G1],E,T).
+typeDef(G,funRecDef(id(X),T,args(A),E),[(X,types(TS,T))|G]) :- genTypes(A,[],TS), assocArg(A,G,G1), typeExpr([(X,types(TS,T))|G1],E,T).
 
 
 /* ECHO  */
