@@ -9,7 +9,6 @@
 (* ========================================================================== *)
 open Ast
 
-
 let type_of e = match e with
 
   | ASTStat _ -> "ASTStat"
@@ -28,10 +27,22 @@ let (ev_env:(string*v) list) = [("true",Z(1));("false",Z(0))];;
 let rec find_x x e = 
   match e with 
    [] -> failwith x
-  | (a,v)::rest -> if a == x then v else find_x x rest
+  | (a,v)::rest -> if (String.equal a x) then v else find_x x rest
 
 (* ------------------------------------------------ *)
 
+
+let print_z x = match x with
+  Z(n) -> string_of_int n
+
+let idGetter x = match x with 
+  ASTId(a) -> ("ASTId" ^ a)
+  |ASTApp(_,_) -> ("ASTApp")
+
+
+ let print_bool x = match x with 
+ true -> "true"
+ |false -> "false" 
 
 (* ------------------------------------------------ *)
 
@@ -89,10 +100,10 @@ let rec eval_arg a = match a with
     
     | ASTId(x) -> (find_x x c)
     
-    |ASTif(condition,body,alternant) -> if ((eval_expr condition c )== Z(1)) then (eval_expr body c) else (eval_expr alternant c)
+    |ASTif(condition,body,alternant) -> if ((eval_expr condition c ) = Z(1)) then (eval_expr body c) else (eval_expr alternant c)
     |ASTfun(args,e1) -> F(e1,(extractArgs args),c)
-    |ASTand(a,b) -> if (eval_expr a c) == Z(1) then (eval_expr b c) else Z(0)
-    |ASTor(a,b) -> if (eval_expr a c) == Z(0) then (eval_expr b c) else Z(1)
+    |ASTand(a,b) -> if (eval_expr a c) = Z(1) then (eval_expr b c) else Z(0)
+    |ASTor(a,b) -> if (eval_expr a c) = Z(0) then (eval_expr b c) else Z(1)
     
 
 
@@ -105,9 +116,8 @@ and eval_exprs es c=
 
 and eval_stat s c =
   match s with
-      ASTEcho e -> match eval_expr e c with
-      | Z(n) -> string_of_int n
-      | _ -> failwith "Pas affichable"
+      ASTEcho e -> (match (eval_expr e c) with
+      Z(n) -> string_of_int n)
 
 
 and eval_def d c= 
