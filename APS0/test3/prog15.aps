@@ -1,0 +1,1 @@
+[ CONST x int 42 ; FUN f int [ x : int ] x ; ECHO x ]
