@@ -96,11 +96,42 @@ and print_stat s =
 	print_expr(e);
 	Printf.printf(")")
       )
+      |ASTSet(x,e) -> (
+        Printf.printf "set(";
+        print_expr (ASTId(x));
+        Printf.printf ",";
+        print_expr e;
+        Printf.printf ")"
+      )
+      |ASTIff(e,bk1,bk2) -> (
+        Printf.printf "iff(";
+        print_expr e;
+        Printf.printf ",[";
+        print_cmds bk1;
+        Printf.printf "],[";
+        print_cmds bk2;
+        Printf.printf "])";
+      )
+      |ASTloop(e,bk) -> (
+        Printf.printf "while(";
+        print_expr e;
+        Printf.printf",[";
+        print_cmds bk;
+        Printf.printf "])"
+      )
+      |ASTCall(x,es) -> (
+        Printf.printf "call(";
+        print_expr (ASTId(x));
+        Printf.printf ",[";
+        print_exprs es;
+        Printf.printf "])";
+      )
 
 and print_type t = 
   match t with 
     Bool -> Printf.printf"bool"
     |Int -> Printf.printf"int"
+    |Void -> Printf.printf"void"
     |FuncT(ts) -> (
       Printf.printf"types([";
       let rec pta x = 
@@ -108,6 +139,7 @@ and print_type t =
             [] -> ()
             |[Bool] -> Printf.printf"],bool)"
             |[Int] -> Printf.printf"],int)"
+            |[Void] -> Printf.printf"],void"
             |Bool::c -> (
               if (List.length c == 1)then (Printf.printf "bool") else
               Printf.printf"bool, ";
@@ -116,6 +148,11 @@ and print_type t =
             |Int::c -> (
               if (List.length c == 1)then (Printf.printf "int") else
               Printf.printf"int, ";
+              pta c;
+            )
+            |Void::c -> (
+              if (List.length c == 1)then (Printf.printf "void") else
+              Printf.printf"void, ";
               pta c;
             )
             |[FuncT([])] -> ()
@@ -166,7 +203,7 @@ match d with
       print_args a;
       Printf.printf", ";
       print_expr e;
-      Printf.printf")";
+      Printf.printf")"
     )
     |ASTfunRecDef(i,t,a,e) -> (
       Printf.printf"funRecDef(";
@@ -177,8 +214,34 @@ match d with
       print_args a;
       Printf.printf", ";
       print_expr e;
-      Printf.printf")";
+      Printf.printf")"
     )
+    |ASTVar(x,t) -> (
+      Printf.printf "var(";
+      print_expr (ASTId(x));
+      Printf.printf ",";
+      print_type t;
+      Printf.printf ")"
+    )
+    |ASTProc(x,a,bk) -> (
+      Printf.printf "proc(";
+      print_expr (ASTId(x));
+      Printf.printf ",";
+      print_args a;
+      Printf.printf ",[";
+      print_cmds bk;
+      Printf.printf "])"
+    )
+    |ASTProcRec(x,a,bk) -> (
+      Printf.printf "procRec(";
+      print_expr (ASTId(x));
+      Printf.printf ",";
+      print_args a;
+      Printf.printf ",[";
+      print_cmds bk;
+      Printf.printf "])"
+    )
+
 and print_cmd c =
   match c with
       ASTStat s -> print_stat s

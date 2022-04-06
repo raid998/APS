@@ -1,1 +1,6 @@
-[FUN f int [x:int, h : (bool -> int)] ( h ( eq x 0) ); ECHO (f 0 [b:bool](if b 42 43))]
+[ CONST y bool false; 
+  VAR x bool; 
+  SET x true; 
+  SET x (not x); 
+  FUN bi int [b:bool] (if b 1 0); 
+  ECHO (bi x) ]

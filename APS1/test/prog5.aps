@@ -1,1 +1,0 @@
-[FUN REC f bool [x:bool](or x (f (not x)));ECHO (if (f false) 42 0)]
