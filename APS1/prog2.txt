@@ -1,0 +1,1 @@
+prog([echo(app(app(id(add),[num(1),num(2)]),[app(id(add),[num(1),num(2)]),num(2),num(3),num(4),id(true),id(false)]))]).

@@ -1,0 +1,1 @@
+[CONST x int 21; FUN f int [n: int] (mul x n);CONST x int 2;ECHO (f x)]
