@@ -31,7 +31,7 @@ type expr =
   | ASTfun of arg list*expr
 
 type stat =
-    ASTEcho of expr
+      ASTEcho of expr
     | ASTSet of string * expr
     | ASTIff of expr * cmd list*cmd list
     | ASTloop of expr * cmd list
@@ -47,7 +47,7 @@ and def =
 
       
 and cmd =
-    ASTStat of stat
+     ASTStat of stat
     |ASTDef of def
 
 

@@ -2,5 +2,5 @@
   VAR x bool; 
   SET x true; 
   SET x (not x); 
-  FUN bi int [b:bool] (if b 1 0); 
+  FUN bi int [b:bool] (if b 1 42); 
   ECHO (bi x) ]

@@ -1,4 +1,4 @@
-for file in test3/*.aps
+for file in test/*.aps
 do
     echo $file ": " 
     type=$(./prologTerm $file | swipl -s typeCheck.pl -g main_stdin 2>&1)

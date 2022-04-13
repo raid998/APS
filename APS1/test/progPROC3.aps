@@ -1,0 +1,4 @@
+[ 
+  PROC printBool [x: int] [ECHO x];
+  CALL printBool 42
+]
