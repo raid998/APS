@@ -1,0 +1,2 @@
+[ VAR x  bool; SET x true; SET x (not x);
+FUN bti int [b:bool](if b 1 42); ECHO(bti x)]

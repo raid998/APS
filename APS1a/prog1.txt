@@ -1,0 +1,1 @@
+prog([echo(fun(args([arg(id(a), types([int, types([int, int],int), int, int],int)), arg(id(a), int), arg(id(a), int)]), num(1)))]).

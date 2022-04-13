@@ -1,0 +1,6 @@
+[ 
+  VAR x bool;
+  SET x true;
+  WHILE x [ SET x (not x)];
+  ECHO 42
+]
