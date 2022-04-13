@@ -18,15 +18,33 @@ type v =
     | Z of int
     | F of expr*string list*(string*v) list
     | Fr of expr*string*string list*(string*v) list
+    | A of int ref
 let (ev_env:(string*v) list) = [("true",Z(1));("false",Z(0))];;
 
+let mem_counter = ref 0;;
 
+let (mem_env: (int*v option) list) = [];;
+
+let alloc mem = let res =  (!mem_counter, ((!mem_counter, None)::mem)) in mem_counter := (!mem_counter + 1) ; res;;
+
+let rec find_from_mem a mem =
+  match mem with 
+  [] -> failwith "address not in memory"
+  |(x,v)::rest -> if x = a then (
+    match v with 
+    None -> failwith "undefined"
+    |Some v1 -> v1
+  ) else find_from_mem a rest
 (* ------------------------------------------------ *)
 
-let rec find_x x e = 
+let rec find_id x e m = 
   match e with 
    [] -> failwith x
-  | (a,v)::rest -> if (String.equal a x) then v else find_x x rest
+  | (a,v)::rest -> if (String.equal a x) then (
+    match v with 
+    A(i) -> find_from_mem i m
+    |_ -> v
+    ) else find_id x rest m
 
 (* ------------------------------------------------ *)
 
@@ -97,7 +115,7 @@ let rec eval_arg a = match a with
       |Fr(body,name,vars,sc) -> let vals = eval_exprs es c in eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ))
       )
     
-    | ASTId(x) -> (find_x x c)
+    | ASTId(x) -> (find_id x c [])
     
     |ASTif(condition,body,alternant) -> if ((eval_expr condition c ) = Z(1)) then (eval_expr body c) else (eval_expr alternant c)
     |ASTfun(args,e1) -> F(e1,(extractArgs args),c)
