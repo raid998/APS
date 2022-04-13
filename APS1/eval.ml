@@ -23,7 +23,7 @@ let (ev_env:(string*v) list) = [("true",Z(1));("false",Z(0))];;
 
 let mem_counter = ref 0;;
 
-let (mem_env: (int*v option) list) = [];;
+let (mem_env: (int ref*v option) list) = [];;
 
 let alloc mem = let res =  (!mem_counter, ((!mem_counter, None)::mem)) in mem_counter := (!mem_counter + 1) ; res;;
 
@@ -98,48 +98,48 @@ let rec eval_arg a = match a with
   |[b] -> [eval_arg(b)]
   |b::bs -> eval_arg b::(eval_args bs)
     
-   and eval_expr e c =  match e with
-      ASTNum n -> Z(n)
+   and eval_expr e c m=  match e with
+      ASTNum n -> Z(n)    
       | ASTApp(e1, es) -> 
       (match e1 with 
-        ASTId("not") -> eval_not ((eval_expr (List.hd es) c)) 
-       |ASTId("add") ->  (eval_add (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
-       |ASTId("sub") ->  (eval_sub (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
-       |ASTId("mul") ->  (eval_mul (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
-       |ASTId("div") ->  (eval_div (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
-       |ASTId("eq") ->  (eval_eq (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
-       |ASTId("lt") ->  (eval_lt (eval_expr (List.hd es) c) (eval_expr (List.hd (List.tl es)) c))
-       | _ -> let closure = eval_expr e1 c in (match closure with
+        ASTId("not") -> eval_not ((eval_expr (List.hd es) c m)) 
+       |ASTId("add") ->  (eval_add (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
+       |ASTId("sub") ->  (eval_sub (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
+       |ASTId("mul") ->  (eval_mul (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
+       |ASTId("div") ->  (eval_div (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
+       |ASTId("eq") ->  (eval_eq (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
+       |ASTId("lt") ->  (eval_lt (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
+       | _ -> let closure = eval_expr e1 c m in (match closure with
       |Z(_) -> failwith "Pas une fonction"
-      |F(body,vars,sc) -> let vals = eval_exprs es c in eval_expr body (List.append (List.combine vars vals) sc )
-      |Fr(body,name,vars,sc) -> let vals = eval_exprs es c in eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ))
+      |F(body,vars,sc) -> let vals = eval_exprs es c m in eval_expr body (List.append (List.combine vars vals) sc ) m
+      |Fr(body,name,vars,sc) -> let vals = eval_exprs es c m in eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m)
       )
     
-    | ASTId(x) -> (find_id x c [])
+    | ASTId(x) -> (find_id x c m)
     
-    |ASTif(condition,body,alternant) -> if ((eval_expr condition c ) = Z(1)) then (eval_expr body c) else (eval_expr alternant c)
+    |ASTif(condition,body,alternant) -> if ((eval_expr condition c m) = Z(1)) then (eval_expr body c m) else (eval_expr alternant c m)
     |ASTfun(args,e1) -> F(e1,(extractArgs args),c)
-    |ASTand(a,b) -> if (eval_expr a c) = Z(1) then (eval_expr b c) else Z(0)
-    |ASTor(a,b) -> if (eval_expr a c) = Z(0) then (eval_expr b c) else Z(1)
+    |ASTand(a,b) -> if (eval_expr a c m) = Z(1) then (eval_expr b c m) else Z(0)
+    |ASTor(a,b) -> if (eval_expr a c m) = Z(0) then (eval_expr b c m) else Z(1)
     
 
 
 
-and eval_exprs es c=
+and eval_exprs es c m =
   match es with
       [] -> []
-    | [e] -> [eval_expr e c] 
-    | e::es -> (eval_expr e c)::(eval_exprs es c)
+    | [e] -> [eval_expr e c m] 
+    | e::es -> (eval_expr e c m)::(eval_exprs es c m)
 
-and eval_stat s c =
+and eval_stat s c m =
   match s with
-      ASTEcho e -> (match (eval_expr e c) with
+      ASTEcho e -> (match (eval_expr e c m) with
       Z(n) -> string_of_int n)
 
 
-and eval_def d c= 
+and eval_def d c m = 
 match d with 
-    ASTconst(x,_,e) -> (x, (eval_expr e c)) :: c
+    ASTconst(x,_,e) -> (x, (eval_expr e c m)) :: c
     |ASTfunDef(x,t,a,e) -> (x,F(e,(eval_args a),c)) ::c
     |ASTfunRecDef(x,t,a,e) -> (x,Fr(e,x,(eval_args a),c)) ::c
 
@@ -147,25 +147,25 @@ match d with
 (* *********************************** *)
 
 
-and eval_cmd cmd c=
+and eval_cmd cmd c m=
   match cmd with
-     ASTDef d -> eval_def d c
+     ASTDef d -> eval_def d c m
        
     |ASTStat _ -> c
 
 
-and eval_cmds cs c=
+and eval_cmds cs c m=
   match cs with
     [] -> ()
-    |[ASTStat(a)] -> Printf.printf "%s" (eval_stat a c) 
-    | a::b -> let c1 =  (eval_cmd a c) in eval_cmds b c1
+    |[ASTStat(a)] -> Printf.printf "%s" (eval_stat a c m) 
+    | a::b -> let c1 =  (eval_cmd a c m) in eval_cmds b c1 m
 	
 
 (* *********************************** *)
 
 
 
-and eval_prog p = eval_cmds p ev_env
+and eval_prog p = eval_cmds p ev_env mem_env
 ;;
 	
 let _ =
