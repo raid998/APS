@@ -9,8 +9,41 @@
 (* ========================================================================== *)
 open Ast
 
+let rec print_argp a = 
+  match a with 
+      Argp(i,t) -> (
+        Printf.printf "argp(";
+        print_expr (ASTId(i));
+        Printf.printf ", ";
+        print_type t;
+        Printf.printf ")"
+      )
+    | Argpv(i,t) -> (
+      Printf.printf "argp(";
+      print_expr (ASTId(i));
+      Printf.printf ", ref(";
+      print_type t;
+      Printf.printf "))"
+    )
 
-let rec print_arg a = match a with 
+  and print_argsp a =
+    match a with 
+      [] -> ()  
+    | b -> (
+      Printf.printf "argsp([";
+      let rec print_argsp_aux x =
+        match x with 
+            [] -> ()
+          | [c] -> (print_argp c)
+          | c::d -> (
+            print_argp c;
+            Printf.printf ",";
+            print_argsp_aux d
+          ) in print_argsp_aux b;
+      Printf.printf "])"
+      )
+    
+and print_arg a = match a with 
   Argu(i,t) -> (
     Printf.printf"arg(";
     print_expr (ASTId(i));
@@ -89,6 +122,20 @@ and print_exprs es =
 	print_exprs es
       )
 
+and print_exprp e =
+  match e with 
+      ASTExpr(e1) -> print_expr e1
+    | ASTAdr(a) -> Printf.printf "adr(%s)" a
+
+and print_exprsp es = 
+  match es with
+       [] -> ()
+     | [e] -> print_exprp e
+     | e::es -> (
+       print_exprp e;
+       Printf.printf ",";
+       print_exprsp es
+     )
 and print_stat s =
   match s with
       ASTEcho e -> (
@@ -123,7 +170,7 @@ and print_stat s =
         Printf.printf "call(";
         print_expr (ASTId(x));
         Printf.printf ",[";
-        print_exprs es;
+        print_exprsp es;
         Printf.printf "])";
       )
 
@@ -227,7 +274,7 @@ match d with
       Printf.printf "proc(";
       print_expr (ASTId(x));
       Printf.printf ",";
-      print_args a;
+      print_argsp a;
       Printf.printf ",[";
       print_cmds bk;
       Printf.printf "])"
@@ -236,7 +283,7 @@ match d with
       Printf.printf "procRec(";
       print_expr (ASTId(x));
       Printf.printf ",";
-      print_args a;
+      print_argsp a;
       Printf.printf ",[";
       print_cmds bk;
       Printf.printf "])"

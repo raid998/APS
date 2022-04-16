@@ -1,6 +1,1 @@
-[ CONST y bool false; 
-  VAR x bool; 
-  SET x true; 
-  SET x (not x); 
-  FUN bi int [b:bool] (if b 1 42); 
-  ECHO (bi x) ]
+[ PROC p [x:int,y:bool] [ IF y [ ECHO 0 ] [ ECHO x ] ]; CALL p 42 true; CALL p 42 false ]

@@ -34,12 +34,14 @@ rule token = parse
   | "CONST" { CONST }
   | "FUN" { FUN }
   | "REC" { REC }
-  | "if" {IF}
-  | "and" {AND}
-  | "or" {OR}
-  | "bool" {BOOL}
-  | "int" {INT}  
-  | "void" {VOID}  
+  | "if" { IF }
+  | "and" { AND }
+  | "or" { OR }
+  | "bool" { BOOL }
+  | "int" { INT }  
+  | "void" { VOID } 
+  | "adr" { ADR } 
+  | "var" { VAR2 }
   | ['0'-'9']+('.'['0'-'9'])? as lxm { NUM(int_of_string lxm) }
   | ['a'-'z']['a'-'z''A'-'Z''0'-'9']* as lxm { IDENT(lxm) }
   | eof              { raise Eof }

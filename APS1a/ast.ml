@@ -9,7 +9,7 @@
 (* ========================================================================== *)
 
 type typ = 
-  Bool
+    Bool
   | Int
   | Void
   | FuncT of typ list
@@ -17,9 +17,12 @@ type typ =
 
 
 
-  type arg = 
-  Argu of string*typ
+type arg = 
+    Argu of string*typ
 
+type argp = 
+    Argp of string*typ
+  | Argpv of string*typ
   
 type expr =
     ASTNum of int
@@ -30,20 +33,24 @@ type expr =
   | ASTApp of expr * expr list
   | ASTfun of arg list*expr
 
+type exprp = 
+    ASTExpr of expr
+  | ASTAdr of string
+
 type stat =
       ASTEcho of expr
     | ASTSet of string * expr
     | ASTIff of expr * cmd list*cmd list
     | ASTloop of expr * cmd list
-    | ASTCall of string * expr list
+    | ASTCall of string * exprp list
     
 and def = 
  ASTconst of string*typ*expr
   | ASTfunDef of string*typ*arg list*expr
   | ASTfunRecDef of string*typ*arg list*expr
   | ASTVar of string * typ
-  | ASTProc of string * arg list * cmd list
-  | ASTProcRec of string * arg list * cmd list
+  | ASTProc of string * argp list * cmd list
+  | ASTProcRec of string * argp list * cmd list
 
       
 and cmd =

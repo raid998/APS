@@ -1,1 +1,0 @@
-[IF true [ECHO 42] [ECHO 0]];

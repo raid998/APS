@@ -110,7 +110,8 @@ Z(x1),Z(y1) -> if(x1<y1) then Z(1) else Z(0)
 
 let rec extractArgs l= match l with
   [] -> []
-  |Argu(a,t)::xs -> a::(extractArgs xs)
+  |Argp(a,_)::xs -> a::(extractArgs xs)
+  |Argpv(a,_)::xs -> a::(extractArgs xs)
   
 
 (* ------------------------------------------------ *)
@@ -141,7 +142,7 @@ let rec eval_arg a = match a with
     | ASTId(x) -> (get_val x c m)
     
     |ASTif(condition,body,alternant) -> if ((eval_expr condition c m) = Z(1)) then (eval_expr body c m) else (eval_expr alternant c m)
-    |ASTfun(args,e1) -> F(e1,(extractArgs args),c)
+    |ASTfun(args,e1) -> F(e1,(eval_args args),c)
     |ASTand(a,b) -> if (eval_expr a c m) = Z(1) then (eval_expr b c m) else Z(0)
     |ASTor(a,b) -> if (eval_expr a c m) = Z(0) then (eval_expr b c m) else Z(1)
     
@@ -153,11 +154,19 @@ and eval_exprs es c m =
       [] -> []
     | [e] -> [eval_expr e c m] 
     | e::es -> (eval_expr e c m)::(eval_exprs es c m)
-
+and eval_exprp e c m = 
+        match e with 
+            ASTExpr(e1) -> eval_expr e1 c m
+          | ASTAdr(a) -> (match (find_x a c) with A(i) -> A(i) | _ -> failwith "not a reference")
+and eval_exprsp es c m = 
+        match es with 
+            [] -> []
+          | [e] -> [eval_exprp e c m]
+          | e::es -> (eval_exprp e c m) ::(eval_exprsp es c m)
 and eval_stat s c m f=
   match s with
       ASTEcho e ->  (match (eval_expr e c m) with
-      Z(n) -> (let () = Printf.printf "%s" ( (string_of_int n)) in (m,(string_of_int n) ^ f)))
+      Z(n) -> (match f with "" -> (m,(string_of_int n)) | _ -> (m,(string_of_int n) ^("." ^ f))))
     | ASTSet(x,e) -> let v = find_x x c in (
       match v with 
         A(a) -> let v1 = eval_expr e c m in (
@@ -168,8 +177,8 @@ and eval_stat s c m f=
     | ASTloop(e,bk) -> if (eval_expr e c m = Z(1)) then let (m1,f1) = eval_cmds bk c m f in   eval_stat s c m1 f else (m,f)
     | ASTCall(x,es) -> let x1 = get_val x c m in (
         match x1 with 
-          P(bk,args,c1) -> let values = eval_exprs es c m in let c2 = (List.combine args values) @ c1 in eval_cmds bk c2 m f 
-        | Pr(bk,n,args,c1) ->  let values = eval_exprs es c m in let c2 = (List.combine args values)@((n,Pr(bk,n,args,c1))::c1) in eval_cmds bk c2 m f 
+          P(bk,args,c1) -> let values = eval_exprsp es c m in let c2 = (List.combine args values) @ c1 in eval_cmds bk c2 m f 
+        | Pr(bk,n,args,c1) ->  let values = eval_exprsp es c m in let c2 = (List.combine args values)@((n,Pr(bk,n,args,c1))::c1) in eval_cmds bk c2 m f 
         | _ -> failwith "not callable"
     )
 
@@ -179,8 +188,8 @@ match d with
     | ASTfunDef(x,_,a,e) -> ((x,F(e,(eval_args a),c)) ::c, m)
     | ASTfunRecDef(x,_,a,e) -> ((x,Fr(e,x,(eval_args a),c)) ::c, m)
     | ASTVar(x,_) -> let (a,mem) = (alloc m) in (((x,A(a))::c), mem)
-    | ASTProc(x,a,bk) -> (((x,P(bk,(eval_args a),c))::c),m)
-    | ASTProcRec(x,a,bk) -> (((x,Pr(bk,x,(eval_args a),c))::c),m)
+    | ASTProc(x,a,bk) -> (((x,P(bk,(extractArgs a),c))::c),m)
+    | ASTProcRec(x,a,bk) -> (((x,Pr(bk,x,(extractArgs a),c))::c),m)
 
 
 (* *********************************** *)
@@ -195,7 +204,7 @@ and eval_cmd cmd c m f=
 
 and eval_cmds cs c m f=
   match cs with
-    [] -> (m,f)
+    [] ->  (m,f)
     | a::b -> let c1 =  (eval_cmd a c m f) in eval_cmds b (fst (fst c1)) (snd (fst c1)) (snd c1)
 	
 
@@ -203,7 +212,7 @@ and eval_cmds cs c m f=
 
 
 
-and eval_prog p = eval_cmds p ev_env mem_env ""
+and eval_prog p = let (_,f) =  eval_cmds p ev_env mem_env "" in Printf.printf "%s" f 
 ;;
 	
 let _ =

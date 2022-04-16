@@ -1,1 +1,0 @@
-[ FUN f int [ x : int ] (mul x 2) ; ECHO (f 21) ]

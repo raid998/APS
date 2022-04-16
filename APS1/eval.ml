@@ -157,7 +157,7 @@ and eval_exprs es c m =
 and eval_stat s c m f=
   match s with
       ASTEcho e ->  (match (eval_expr e c m) with
-      Z(n) -> (let () = Printf.printf "%s" ( (string_of_int n)) in (m,(string_of_int n) ^ f)))
+      Z(n) -> (match f with "" -> (m,(string_of_int n)) | _ -> (m,(string_of_int n) ^("." ^ f))))
     | ASTSet(x,e) -> let v = find_x x c in (
       match v with 
         A(a) -> let v1 = eval_expr e c m in (
@@ -203,7 +203,7 @@ and eval_cmds cs c m f=
 
 
 
-and eval_prog p = eval_cmds p ev_env mem_env ""
+and eval_prog p = let (_,f) =  eval_cmds p ev_env mem_env "" in Printf.printf "%s" f 
 ;;
 	
 let _ =
