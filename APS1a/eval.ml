@@ -21,6 +21,14 @@ type v =
     | A of int
     | P of cmd list*string list*((string*v) list)
     | Pr of cmd list*string*string list*((string*v) list)
+
+let string_of_v v = match v with 
+  Z(n) -> "Z(" ^ ((string_of_int n) ^ ")")
+  |F(_,_,_) -> "F"
+  |Fr(_,_,_,_) -> "Fr"
+  |A(n) -> "A(" ^ ((string_of_int n) ^ ")")
+  |P(_,_,_) -> "P"
+  |Pr(_,_,_,_) ->"Pr"
 let (ev_env:(string*v) list) = [("true",Z(1));("false",Z(0))];;
 
 let mem_counter = ref 0;;
@@ -156,7 +164,8 @@ and eval_exprs es c m =
     | e::es -> (eval_expr e c m)::(eval_exprs es c m)
 and eval_exprp e c m = 
         match e with 
-            ASTExpr(e1) -> eval_expr e1 c m
+            ASTExpr(ASTId(x)) -> find_x x c
+          | ASTExpr(e1) -> eval_expr e1 c m
           | ASTAdr(a) -> (match (find_x a c) with A(i) -> A(i) | _ -> failwith "not a reference")
 and eval_exprsp es c m = 
         match es with 
@@ -172,10 +181,10 @@ and eval_stat s c m f=
         A(a) -> let v1 = eval_expr e c m in (
           if (is_defined x c m) then 
           ((set_val a v1 m),f) else failwith "undefined"
-        ))
+        ) | _ -> failwith (string_of_v v))
     | ASTIff(e,bk1,bk2) -> if (eval_expr e c m = Z(1)) then eval_cmds bk1 c m f else eval_cmds bk2 c m f
     | ASTloop(e,bk) -> if (eval_expr e c m = Z(1)) then let (m1,f1) = eval_cmds bk c m f in   eval_stat s c m1 f else (m,f)
-    | ASTCall(x,es) -> let x1 = get_val x c m in (
+    | ASTCall(x,es) -> let x1 = find_x x c in (
         match x1 with 
           P(bk,args,c1) -> let values = eval_exprsp es c m in let c2 = (List.combine args values) @ c1 in eval_cmds bk c2 m f 
         | Pr(bk,n,args,c1) ->  let values = eval_exprsp es c m in let c2 = (List.combine args values)@((n,Pr(bk,n,args,c1))::c1) in eval_cmds bk c2 m f 
