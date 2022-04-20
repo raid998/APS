@@ -156,12 +156,36 @@ let rec eval_arg a = match a with
       )
     
     | ASTId(x) -> ((get_val x c m),m)
-    
-    | ASTif(condition,body,alternant) -> if (fst (eval_expr condition c m) = Z(1)) then (fst (eval_expr body c m),m) else (fst (eval_expr alternant c m),m)
+    | ASTif(condition,body,alternant) -> if (fst (eval_expr condition c m) = Z(1)) then eval_expr body c m else eval_expr alternant c m
     | ASTfun(args,e1) -> (F(e1,(eval_args args),c),m)
     | ASTand(a,b) -> let (x,m1) =  (eval_expr a c m) in  if x = Z(1) then (eval_expr b c m1) else (Z(0),m1)
     | ASTor(a,b) -> let (x,m1) =  (eval_expr a c m) in if x = Z(1) then ( Z(1),m1) else (eval_expr b c m1)
     | ASTAlloc(e) -> let (Z(n), m1) = eval_expr e c m in let (a,m2) = allocn m1 n in (B(A(a),n),m2)
+    | ASTLen(e) -> (
+      match eval_expr e c m with 
+        (B(A(a),n),m1) -> (Z(n), m1)
+        | _ -> failwith "len: not a vector" 
+        )
+    | ASTNthE(e1,e2) -> (match eval_expr e1 c m with
+        (B(A(a),n),m1) -> (match eval_expr e2 c m1 with 
+          (Z(i),m2) -> (find_from_mem (a+i) m2,m2)
+        )
+        | _ -> failwith "nth :not a vector"
+
+    )
+    | ASTVset(e1,e2,e3) -> (
+      match eval_expr e1 c m with 
+        (B(A(a),n),m1) -> (
+          match eval_expr e2 c m1 with 
+              (Z(i), m2) -> (
+                  match eval_expr e3 c m2 with 
+                    (v,m3) -> (B(A(a),n),set_val (a + i) v m3)
+                    | _ -> failwith "vset : value must be an expression"
+              )
+            | _ -> failwith "vset : index must be a number"
+        )
+      | _ -> failwith "vset : not a vector"
+    )
 
 
 
@@ -197,7 +221,7 @@ match lval with
         | _ -> (let (a1,m1) = eval_lval lval1 c m in 
           match find_from_mem a1 m1 with 
           B(A(a2),_) -> (match eval_expr e c m1 with
-              (Z(i),m2) -> ((a2+i,m2))
+              (Z(i),m2) -> ((a2+i),m2)
             | _ -> failwith "index must be an integer"
           )
           | _ -> failwith "undefined in memory"
@@ -207,7 +231,7 @@ and eval_stat s c m f=
   match s with
       ASTEcho e ->  (match (fst(eval_expr e c m)) with
       Z(n) -> (match f with "" -> (m,(string_of_int n)) | _ -> (m,(string_of_int n) ^("." ^ f))))
-    | ASTSet(x,e) ->let (v,m1) = eval_expr e c m  in let (a1,m2) = eval_lval x c m in (
+    | ASTSet(x,e) -> let () = Printf.printf "setting... \n" in  let (v,m1) = eval_expr e c m  in let (a1,m2) = eval_lval x c m1 in (
         (set_val a1 v m2,f)
     )
     | ASTIff(e,bk1,bk2) -> if (fst (eval_expr e c m) = Z(1)) then eval_cmds bk1 c m f else eval_cmds bk2 c m f
