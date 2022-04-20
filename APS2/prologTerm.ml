@@ -91,26 +91,52 @@ and print_arg a = match a with
       print_expr alternant;
       Printf.printf")";
     )
-    |ASTfun(args,e) -> (
+    | ASTfun(args,e) -> (
       Printf.printf"fun(";
       print_args args;
       Printf.printf ", ";
       print_expr e;
       Printf.printf ")";
     )
-    |ASTand(a,b) -> (
+    | ASTand(a,b) -> (
       Printf.printf"and(";
       print_expr a;
       Printf.printf", ";
       print_expr b;
       Printf.printf")";
     )
-    |ASTor(a,b) -> (
+    | ASTor(a,b) -> (
       Printf.printf"or(";
       print_expr a;
       Printf.printf", ";
       print_expr b;
       Printf.printf")";
+    )
+    | ASTAlloc(e) -> (
+      Printf.printf "alloc(";
+      print_expr e;
+      Printf.printf ")"
+    )
+    | ASTLen(e) -> (
+      Printf.printf "len(";
+      print_expr e;
+      Printf.printf ")"
+    )
+    | ASTNthE (e1, e2) -> (
+      Printf.printf "nth(";
+      print_expr e1;
+      Printf.printf ",";
+      print_expr e2;
+      Printf.printf ")"
+    )
+    | ASTVset (e1,e2,e3) -> (
+      Printf.printf "vset(";
+      print_expr e1;
+      Printf.printf ",";
+      print_expr e2;
+      Printf.printf ",";
+      print_expr e3;
+      Printf.printf ")"
     )
 and print_exprs es =
   match es with
@@ -136,6 +162,17 @@ and print_exprsp es =
        Printf.printf ",";
        print_exprsp es
      )
+and print_lval lvalue = 
+  match lvalue with
+      ASTLval(x) -> print_expr (ASTId(x))
+    | ASTNthL (lv,e) -> (
+        Printf.printf "nth(";
+        print_lval lv;
+        Printf.printf ",";
+        print_expr e;
+        Printf.printf ")"
+    )
+
 and print_stat s =
   match s with
       ASTEcho e -> (
@@ -145,7 +182,7 @@ and print_stat s =
       )
       |ASTSet(x,e) -> (
         Printf.printf "set(";
-        print_expr (ASTId(x));
+        print_lval (x);
         Printf.printf ",";
         print_expr e;
         Printf.printf ")"
@@ -176,30 +213,41 @@ and print_stat s =
 
 and print_type t = 
   match t with 
-    Bool -> Printf.printf"bool"
-    |Int -> Printf.printf"int"
-    |Void -> Printf.printf"void"
-    |FuncT(ts) -> (
+      SType(t1) -> print_stype t1
+    | FuncT(ts) -> (
       Printf.printf"types([";
       let rec pta x = 
             match x with 
             [] -> ()
-            |[Bool] -> Printf.printf"],bool)"
-            |[Int] -> Printf.printf"],int)"
-            |[Void] -> Printf.printf"],void"
-            |Bool::c -> (
+            |[SType(Vec(tvec))] -> (
+              Printf.printf "],";
+              print_stype (Vec (tvec));
+              Printf.printf ")"
+            )
+            |[SType(Bool)] -> Printf.printf"],bool)"
+            |[SType(Int)] -> Printf.printf"],int)"
+            |[SType(Void)] -> Printf.printf"],void)"
+            |SType(Bool)::c -> (
               if (List.length c == 1)then (Printf.printf "bool") else
               Printf.printf"bool, ";
               pta c;
             )
-            |Int::c -> (
+            |SType(Int)::c -> (
               if (List.length c == 1)then (Printf.printf "int") else
               Printf.printf"int, ";
               pta c;
             )
-            |Void::c -> (
+            |SType(Void)::c -> (
               if (List.length c == 1)then (Printf.printf "void") else
               Printf.printf"void, ";
+              pta c;
+            )
+            |SType((Vec(tvec)))::c -> (
+              if (List.length c == 1)then (print_stype (Vec(tvec))) else
+              
+                (print_stype ((Vec(tvec)));
+                Printf.printf", ");
+
               pta c;
             )
             |[FuncT([])] -> ()
@@ -229,7 +277,16 @@ and print_type t =
           
         )
     
-
+and print_stype t = 
+match t with 
+      Int ->  Printf.printf "int"
+    | Bool -> Printf.printf "bool"
+    | Void -> Printf.printf "void"
+    | Vec(t1) -> (
+      Printf.printf "vec(";
+      print_stype t1;
+      Printf.printf ")"
+    )
 and print_def d = 
 match d with 
     ASTconst(i,t,e) -> (
@@ -267,7 +324,7 @@ match d with
       Printf.printf "var(";
       print_expr (ASTId(x));
       Printf.printf ",";
-      print_type t;
+      print_stype t;
       Printf.printf ")"
     )
     |ASTProc(x,a,bk) -> (

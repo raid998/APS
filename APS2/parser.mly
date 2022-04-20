@@ -18,13 +18,14 @@ open Ast
 %token LBRA RBRA LPAR RPAR SEMICOLON COLON COMMA STAR ARROW
 %token CONST VAR PROC FUN REC ECHO
 %token IF IFF WHILE AND OR
-%token BOOL INT VOID
+%token BOOL INT VOID VEC
 %token SET CALL 
 %token VAR2 ADR
-
+%token ALLOC LEN NTH VSET 
 %type <Ast.expr> expr
 %type <Ast.exprp> exprp
 %type <Ast.typ> typ
+%type <Ast.sType> sType
 %type <Ast.arg> arg
 %type <Ast.arg list> args
 %type <Ast.argp> argp
@@ -35,6 +36,7 @@ open Ast
 %type <Ast.exprp list> exprsp
 %type <Ast.cmd list> cmds
 %type <Ast.cmd list> prog
+%type <Ast.lval> lval
 %start prog
 
 %%
@@ -52,7 +54,7 @@ cmds:
 
 stat:
     ECHO expr             { ASTEcho($2) }
-  | SET IDENT expr        { ASTSet($2,$3)}
+  | SET lval expr        { ASTSet($2,$3) }
   | IFF expr block block {ASTIff($2,$3,$4)}
   | WHILE expr block {ASTloop($2,$3)}
   | CALL IDENT exprsp { ASTCall($2,$3)}
@@ -85,6 +87,10 @@ expr:
   | LPAR OR expr expr RPAR {ASTor($3,$4)}
   | LPAR expr exprs RPAR  { ASTApp($2, $3) }
   | LBRA args RBRA expr { ASTfun($2,$4) }
+  | LPAR ALLOC expr RPAR { ASTAlloc($3) }
+  | LPAR LEN expr RPAR { ASTLen($3) }
+  | LPAR NTH expr expr RPAR { ASTNthE($3,$4) }
+  | LPAR VSET expr expr expr RPAR { ASTVset($3,$4,$5) }
 
 ;
 
@@ -103,17 +109,24 @@ def :
     CONST IDENT typ expr  { ASTconst($2,$3,$4) }
   | FUN IDENT typ LBRA args RBRA expr {ASTfunDef($2,$3,$5,$7)}
   | FUN REC IDENT typ LBRA args RBRA expr {ASTfunRecDef($3,$4,$6,$8)}
-  | VAR IDENT typ {ASTVar($2,$3)}
+  | VAR IDENT sType {ASTVar($2,$3)}
   | PROC IDENT LBRA argsp RBRA block {ASTProc($2,$4,$6)}
   | PROC REC IDENT LBRA argsp RBRA block {ASTProcRec($3,$5,$7)}
   
 ;
 typ :
-    BOOL { Bool }
-  | INT { Int }
-  | VOID { Void }
-  | LPAR types ARROW typ RPAR {FuncT($2 @ [$4])}
+    sType { SType($1) }
+  | LPAR types ARROW typ RPAR { FuncT($2 @ [$4]) }
 ;
 types: 
     typ {[$1]}
   | typ STAR types {$1 :: $3}
+;
+sType:
+    BOOL { Bool }
+  | INT { Int }
+  | LPAR VEC sType RPAR { Vec($3) }
+
+lval :
+    IDENT { ASTLval($1) }
+  | LPAR NTH lval expr RPAR { ASTNthL($3,$4) }

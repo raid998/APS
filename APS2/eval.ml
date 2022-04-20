@@ -130,29 +130,30 @@ let rec eval_arg a = match a with
   |[b] -> [eval_arg(b)]
   |b::bs -> eval_arg b::(eval_args bs)
     
-   and eval_expr e c m=  match e with
-      ASTNum n -> Z(n)    
+   and eval_expr e c m : (v*((int*v option) list)) =  match e with
+      ASTNum n -> (Z(n),m)    
       | ASTApp(e1, es) -> 
       (match e1 with 
-        ASTId("not") -> eval_not ((eval_expr (List.hd es) c m)) 
-       |ASTId("add") ->  (eval_add (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
-       |ASTId("sub") ->  (eval_sub (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
-       |ASTId("mul") ->  (eval_mul (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
-       |ASTId("div") ->  (eval_div (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
-       |ASTId("eq") ->  (eval_eq (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
-       |ASTId("lt") ->  (eval_lt (eval_expr (List.hd es) c m) (eval_expr (List.hd (List.tl es)) c m))
-       | _ -> let closure = eval_expr e1 c m in (match closure with
+        ASTId("not") -> (eval_not (fst (eval_expr (List.hd es) c m)),m) 
+       |ASTId("add") ->  ((eval_add (fst(eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+       |ASTId("sub") ->  ((eval_sub (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+       |ASTId("mul") ->  ((eval_mul (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+       |ASTId("div") ->  ((eval_div (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+       |ASTId("eq") ->  ((eval_eq (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+       |ASTId("lt") ->  ((eval_lt (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+       | _ -> let closure = (fst (eval_expr e1 c m)) in (match closure with
       |Z(_) -> failwith "Pas une fonction"
-      |F(body,vars,sc) -> let vals = eval_exprs es c m in eval_expr body (List.append (List.combine vars vals) sc ) m
-      |Fr(body,name,vars,sc) -> let vals = eval_exprs es c m in eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m)
+      |F(body,vars,sc) -> let vals = eval_exprs es c m in ((fst(eval_expr body (List.append (List.combine vars vals) sc ) m)),m)
+      |Fr(body,name,vars,sc) -> let vals = eval_exprs es c m in ((fst (eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m),m))
+        )
       )
     
-    | ASTId(x) -> (get_val x c m)
+    | ASTId(x) -> ((get_val x c m),m)
     
-    |ASTif(condition,body,alternant) -> if ((eval_expr condition c m) = Z(1)) then (eval_expr body c m) else (eval_expr alternant c m)
-    |ASTfun(args,e1) -> F(e1,(eval_args args),c)
-    |ASTand(a,b) -> if (eval_expr a c m) = Z(1) then (eval_expr b c m) else Z(0)
-    |ASTor(a,b) -> if (eval_expr a c m) = Z(0) then (eval_expr b c m) else Z(1)
+    |ASTif(condition,body,alternant) -> if (fst (eval_expr condition c m) = Z(1)) then (fst (eval_expr body c m),m) else (fst (eval_expr alternant c m),m)
+    |ASTfun(args,e1) -> (F(e1,(eval_args args),c),m)
+    |ASTand(a,b) -> let (x,m1) =  (eval_expr a c m) in  if x = Z(1) then (eval_expr b c m1) else (Z(0),m1)
+    |ASTor(a,b) -> let (x,m1) =  (eval_expr a c m) in if x = Z(1) then ( Z(1),m1) else (eval_expr b c m1)
     
 
 

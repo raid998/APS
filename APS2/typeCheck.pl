@@ -45,6 +45,8 @@ typeDef(G,var(id(X),int),[(X,ref(int))|G]).
 
 typeDef(G,var(id(X),bool),[(X,ref(bool))|G]).
 
+typeDef(G,var(id(X),vec(T)),[X,vec(T)|G]).
+
 typeDef(G,proc(id(X),argsp(A),Bk),[(X,types(TS,void))|G])      :- assocArgp(A,G,G1),genTypesp(A,[],TS),typeBloc(G1,Bk,void).
 
 typeDef(G,procRec(id(X),argsp(A),Bk),[(X,types(TS,void))|G]) :- assocArgp(A,G,G1),genTypesp(A,[],TS),typeBloc([(X,types(TS,void))|G1],Bk,void).
@@ -58,7 +60,7 @@ typeBloc(G,C,void) :- typeSeq(G,C,void).
 
 typeStat(G,echo(E),void) :- typeExpr(G,E,int).
 
-typeStat(G,set(id(X),E),void) :- assoc(X,G,ref(T)),typeExpr(G,E,T).
+typeStat(G,set(LV,E),void) :- typeExpr(G,LV,T),typeExpr(G,E,T).
 
 typeStat(G,iff(E,Bk1,Bk2), void) :- typeExpr(G,E,bool),typeBloc(G,Bk1,void), typeBloc(G,Bk2,void).
 
@@ -86,6 +88,15 @@ typeExpr(G,app(E,ES),T) :- typeExpr(G,E,types(TA,T)),typeCheck(G,ES,TA).
 typeExpr(G,fun(args(A),E),types(TS,T)) :- assocArg(A,G,NewG),typeExpr(NewG,E,T),genTypes(A,[],TS).
 
 typeExpr(G,adr(X),ref(T)) :- assoc(X,G,ref(T)).
+
+typeExpr(G,alloc(E),vec(_)) :- typeExpr(G,E,int).
+
+typeExpr(G,nth(X,Y),T) :- typeExpr(G,X,vec(T)), typeExpr(G,Y,int).
+
+typeExpr(G,len(E),int) :- typeExpr(G,E,vec(_)).
+
+typeExpr(G,vset(E1,E2,E3),vec(T)) :- typeExpr(G,E1,vec(T)),typeExpr(G,E2,int),typeExpr(G,E3,T).
+
 
 type(E,T) :- initCtx(G0), typeExpr(G0,E,T).
 
