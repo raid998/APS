@@ -21,6 +21,7 @@ type v =
     | A of int
     | P of cmd list*string list*((string*v) list)
     | Pr of cmd list*string*string list*((string*v) list)
+    | B of v*int
 
 let string_of_v v = match v with 
   Z(n) -> "Z(" ^ ((string_of_int n) ^ ")")
@@ -36,6 +37,12 @@ let mem_counter = ref 0;;
 let (mem_env: (int*v option) list) = [];;
 
 let alloc mem = let res =  (!mem_counter, ((!mem_counter, None)::mem)) in mem_counter := (!mem_counter + 1) ; res;;
+
+let allocn mem n = let a = !mem_counter in let rec allocn_aux mem1 n d = if d < n then (
+  let m = (!mem_counter,None)::mem1 in
+  mem_counter := (!mem_counter + 1);
+  allocn_aux m n (d+1)
+) else mem1 in let m = allocn_aux mem n 0 in (a,m)
 
 let rec find_from_mem a mem =
   match mem with 
@@ -143,58 +150,78 @@ let rec eval_arg a = match a with
        |ASTId("lt") ->  ((eval_lt (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
        | _ -> let closure = (fst (eval_expr e1 c m)) in (match closure with
       |Z(_) -> failwith "Pas une fonction"
-      |F(body,vars,sc) -> let vals = eval_exprs es c m in ((fst(eval_expr body (List.append (List.combine vars vals) sc ) m)),m)
-      |Fr(body,name,vars,sc) -> let vals = eval_exprs es c m in ((fst (eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m),m))
+      |F(body,vars,sc) -> let vals = List.map fst (eval_exprs es c m) in ((fst(eval_expr body (List.append (List.combine vars vals) sc ) m)),m)
+      |Fr(body,name,vars,sc) -> let vals = List.map fst (eval_exprs es c m) in ((fst (eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m),m))
         )
       )
     
     | ASTId(x) -> ((get_val x c m),m)
     
-    |ASTif(condition,body,alternant) -> if (fst (eval_expr condition c m) = Z(1)) then (fst (eval_expr body c m),m) else (fst (eval_expr alternant c m),m)
-    |ASTfun(args,e1) -> (F(e1,(eval_args args),c),m)
-    |ASTand(a,b) -> let (x,m1) =  (eval_expr a c m) in  if x = Z(1) then (eval_expr b c m1) else (Z(0),m1)
-    |ASTor(a,b) -> let (x,m1) =  (eval_expr a c m) in if x = Z(1) then ( Z(1),m1) else (eval_expr b c m1)
-    
+    | ASTif(condition,body,alternant) -> if (fst (eval_expr condition c m) = Z(1)) then (fst (eval_expr body c m),m) else (fst (eval_expr alternant c m),m)
+    | ASTfun(args,e1) -> (F(e1,(eval_args args),c),m)
+    | ASTand(a,b) -> let (x,m1) =  (eval_expr a c m) in  if x = Z(1) then (eval_expr b c m1) else (Z(0),m1)
+    | ASTor(a,b) -> let (x,m1) =  (eval_expr a c m) in if x = Z(1) then ( Z(1),m1) else (eval_expr b c m1)
+    | ASTAlloc(e) -> let (Z(n), m1) = eval_expr e c m in let (a,m2) = allocn m1 n in (B(A(a),n),m2)
 
 
 
-and eval_exprs es c m =
+and eval_exprs es c m : ((v * (int * v option) list) list)  =
   match es with
       [] -> []
     | [e] -> [eval_expr e c m] 
     | e::es -> (eval_expr e c m)::(eval_exprs es c m)
 and eval_exprp e c m = 
         match e with 
-            ASTExpr(ASTId(x)) -> find_x x c
+            ASTExpr(ASTId(x)) -> (find_x x c,m)
           | ASTExpr(e1) -> eval_expr e1 c m
-          | ASTAdr(a) -> (match (find_x a c) with A(i) -> A(i) | _ -> failwith "not a reference")
+          | ASTAdr(a) -> (match (find_x a c) with A(i) -> (A(i),m) | _ -> failwith "not a reference")
 and eval_exprsp es c m = 
         match es with 
             [] -> []
           | [e] -> [eval_exprp e c m]
           | e::es -> (eval_exprp e c m) ::(eval_exprsp es c m)
+and eval_lval lval c m = 
+match lval with
+        ASTLval(s) -> (match (find_x s c) with 
+            A(a) -> (a,m)
+          | _ -> failwith "invalid identifier"
+        )
+      | ASTNthL(lval1, e) -> (
+        match lval1 with 
+          ASTLval(x1) -> (match (find_x x1 c) with 
+            B(A(a),n) -> (match (eval_expr e c m) with
+                (Z(i),m1) -> ((a+i),m1)
+              | _ -> failwith "error lnth1"
+              )
+            | _ -> failwith (x1 ^ " is not an array\n"))
+        | _ -> (let (a1,m1) = eval_lval lval1 c m in 
+          match find_from_mem a1 m1 with 
+          B(A(a2),_) -> (match eval_expr e c m1 with
+              (Z(i),m2) -> ((a2+i,m2))
+            | _ -> failwith "index must be an integer"
+          )
+          | _ -> failwith "undefined in memory"
+        ))
+            
 and eval_stat s c m f=
   match s with
-      ASTEcho e ->  (match (eval_expr e c m) with
+      ASTEcho e ->  (match (fst(eval_expr e c m)) with
       Z(n) -> (match f with "" -> (m,(string_of_int n)) | _ -> (m,(string_of_int n) ^("." ^ f))))
-    | ASTSet(x,e) -> let v = find_x x c in (
-      match v with 
-        A(a) -> let v1 = eval_expr e c m in (
-          if (is_defined x c m) then 
-          ((set_val a v1 m),f) else failwith "undefined"
-        ) | _ -> failwith (string_of_v v))
-    | ASTIff(e,bk1,bk2) -> if (eval_expr e c m = Z(1)) then eval_cmds bk1 c m f else eval_cmds bk2 c m f
-    | ASTloop(e,bk) -> if (eval_expr e c m = Z(1)) then let (m1,f1) = eval_cmds bk c m f in   eval_stat s c m1 f else (m,f)
+    | ASTSet(x,e) ->let (v,m1) = eval_expr e c m  in let (a1,m2) = eval_lval x c m in (
+        (set_val a1 v m2,f)
+    )
+    | ASTIff(e,bk1,bk2) -> if (fst (eval_expr e c m) = Z(1)) then eval_cmds bk1 c m f else eval_cmds bk2 c m f
+    | ASTloop(e,bk) -> if (fst (eval_expr e c m) = Z(1)) then let (m1,f1) = eval_cmds bk c m f in   eval_stat s c m1 f else (m,f)
     | ASTCall(x,es) -> let x1 = find_x x c in (
         match x1 with 
-          P(bk,args,c1) -> let values = eval_exprsp es c m in let c2 = (List.combine args values) @ c1 in eval_cmds bk c2 m f 
-        | Pr(bk,n,args,c1) ->  let values = eval_exprsp es c m in let c2 = (List.combine args values)@((n,Pr(bk,n,args,c1))::c1) in eval_cmds bk c2 m f 
+          P(bk,args,c1) -> let values = List.map fst (eval_exprsp es c m) in let c2 = (List.combine args values) @ c1 in eval_cmds bk c2 m f 
+        | Pr(bk,n,args,c1) ->  let values = List.map fst (eval_exprsp es c m) in let c2 = (List.combine args values)@((n,Pr(bk,n,args,c1))::c1) in eval_cmds bk c2 m f 
         | _ -> failwith "not callable"
     )
 
 and eval_def d c m = 
 match d with 
-      ASTconst(x,_,e) -> ((x, (eval_expr e c m)) :: c,m)
+      ASTconst(x,_,e) -> let (v,m1) = eval_expr e c m in ((x,v) :: c,m1)
     | ASTfunDef(x,_,a,e) -> ((x,F(e,(eval_args a),c)) ::c, m)
     | ASTfunRecDef(x,_,a,e) -> ((x,Fr(e,x,(eval_args a),c)) ::c, m)
     | ASTVar(x,_) -> let (a,mem) = (alloc m) in (((x,A(a))::c), mem)
