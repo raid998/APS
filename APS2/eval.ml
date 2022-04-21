@@ -141,22 +141,22 @@ let rec eval_arg a = match a with
       ASTNum n -> (Z(n),m)    
       | ASTApp(e1, es) -> 
       (match e1 with 
-        ASTId("not") -> (eval_not (fst (eval_expr (List.hd es) c m)),m) 
-       |ASTId("add") ->  ((eval_add (fst(eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
-       |ASTId("sub") ->  ((eval_sub (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
-       |ASTId("mul") ->  ((eval_mul (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
-       |ASTId("div") ->  ((eval_div (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
-       |ASTId("eq") ->  ((eval_eq (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
-       |ASTId("lt") ->  ((eval_lt (fst (eval_expr (List.hd es) c m)) (fst (eval_expr (List.hd (List.tl es)) c m))),m)
+        ASTId("not") -> let (v,m1) = eval_expr (List.hd es) c m in (eval_not v,m1) 
+       |ASTId("add") -> let (v1,m1) = eval_expr  (List.hd es)  c m in let (v2,m2) = eval_expr (List.hd (List.tl es)) c m1 in ((eval_add v1 v2,m2))
+       |ASTId("sub") -> let (v1,m1) = eval_expr  (List.hd es)  c m in let (v2,m2) = eval_expr (List.hd (List.tl es)) c m1 in ((eval_sub v1 v2,m2))
+       |ASTId("mul") ->  let (v1,m1) = eval_expr  (List.hd es)  c m in let (v2,m2) = eval_expr (List.hd (List.tl es)) c m1 in ((eval_mul v1 v2,m2))
+       |ASTId("div") ->  let (v1,m1) = eval_expr  (List.hd es)  c m in let (v2,m2) = eval_expr (List.hd (List.tl es)) c m1 in ((eval_div v1 v2,m2))
+       |ASTId("eq") ->  let (v1,m1) = eval_expr  (List.hd es)  c m in let (v2,m2) = eval_expr (List.hd (List.tl es)) c m1 in ((eval_eq v1 v2,m2))
+       |ASTId("lt") ->  let (v1,m1) = eval_expr  (List.hd es)  c m in let (v2,m2) = eval_expr (List.hd (List.tl es)) c m1 in ((eval_lt v1 v2,m2))
        | _ -> let closure = (fst (eval_expr e1 c m)) in (match closure with
       |Z(_) -> failwith "Pas une fonction"
       |F(body,vars,sc) -> let vals = List.map fst (eval_exprs es c m) in ((fst(eval_expr body (List.append (List.combine vars vals) sc ) m)),m)
-      |Fr(body,name,vars,sc) -> let vals = List.map fst (eval_exprs es c m) in ((fst (eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m),m))
+      |Fr(body,name,vars,sc) -> let vals = List.map fst (eval_exprs es c m) in (eval_expr body (List.append (List.append (List.combine vars vals) [(name,Fr(body,name,vars,sc))]) sc ) m))
         )
-      )
+  
     
     | ASTId(x) -> ((get_val x c m),m)
-    | ASTif(condition,body,alternant) -> if (fst (eval_expr condition c m) = Z(1)) then eval_expr body c m else eval_expr alternant c m
+    | ASTif(condition,body,alternant) -> let (v1,m1) = eval_expr condition c m in   if (v1 = Z(1)) then  eval_expr body c m1 else  eval_expr alternant c m1
     | ASTfun(args,e1) -> (F(e1,(eval_args args),c),m)
     | ASTand(a,b) -> let (x,m1) =  (eval_expr a c m) in  if x = Z(1) then (eval_expr b c m1) else (Z(0),m1)
     | ASTor(a,b) -> let (x,m1) =  (eval_expr a c m) in if x = Z(1) then ( Z(1),m1) else (eval_expr b c m1)
@@ -193,7 +193,7 @@ and eval_exprs es c m : ((v * (int * v option) list) list)  =
   match es with
       [] -> []
     | [e] -> [eval_expr e c m] 
-    | e::es -> (eval_expr e c m)::(eval_exprs es c m)
+    | e::es -> let (v1,m1) = eval_expr e c m in (v1,m1)::(eval_exprs es c m1)
 and eval_exprp e c m = 
         match e with 
             ASTExpr(ASTId(x)) -> (find_x x c,m)
@@ -203,7 +203,7 @@ and eval_exprsp es c m =
         match es with 
             [] -> []
           | [e] -> [eval_exprp e c m]
-          | e::es -> (eval_exprp e c m) ::(eval_exprsp es c m)
+          | e::es -> let (v1,m1) = eval_exprp e c m in (v1,m1) ::(eval_exprsp es c m1)
 and eval_lval lval c m = 
 match lval with
         ASTLval(s) -> (match (find_x s c) with 
@@ -231,11 +231,11 @@ and eval_stat s c m f=
   match s with
       ASTEcho e ->  (match (fst(eval_expr e c m)) with
       Z(n) -> (match f with "" -> (m,(string_of_int n)) | _ -> (m,(string_of_int n) ^("." ^ f))))
-    | ASTSet(x,e) -> let () = Printf.printf "setting... \n" in  let (v,m1) = eval_expr e c m  in let (a1,m2) = eval_lval x c m1 in (
+    | ASTSet(x,e) -> let (v,m1) = eval_expr e c m  in let (a1,m2) = eval_lval x c m1 in (
         (set_val a1 v m2,f)
-    )
-    | ASTIff(e,bk1,bk2) -> if (fst (eval_expr e c m) = Z(1)) then eval_cmds bk1 c m f else eval_cmds bk2 c m f
-    | ASTloop(e,bk) -> if (fst (eval_expr e c m) = Z(1)) then let (m1,f1) = eval_cmds bk c m f in   eval_stat s c m1 f else (m,f)
+    ) 
+    | ASTIff(e,bk1,bk2) -> let (v,m1) = eval_expr e c m in  if v = Z(1) then eval_cmds bk1 c m1 f else eval_cmds bk2 c m1 f
+    | ASTloop(e,bk) -> let (v,m1) =  (eval_expr e c m) in if v = Z(1) then let (m2,f1) = eval_cmds bk c m1 f in   eval_stat s c m2 f else (m1,f)
     | ASTCall(x,es) -> let x1 = find_x x c in (
         match x1 with 
           P(bk,args,c1) -> let values = List.map fst (eval_exprsp es c m) in let c2 = (List.combine args values) @ c1 in eval_cmds bk c2 m f 
@@ -273,7 +273,7 @@ and eval_cmds cs c m f=
 
 
 
-and eval_prog p = let (_,f) =  eval_cmds p ev_env mem_env "" in Printf.printf "%s" f 
+and eval_prog p = let (_,f) =  eval_cmds p ev_env mem_env "" in Printf.printf "%s\n" f 
 ;;
 	
 let _ =
